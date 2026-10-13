@@ -11,6 +11,8 @@ jobs:
   test:
     timeout-minutes: 120
     runs-on: ubuntu-latest
+    env:
+      DISPLAY: :99 # Applies to ALL steps across the job
 
     steps:
       - name: Check out repository
@@ -28,34 +30,33 @@ jobs:
       - name: Install Chromium with system dependencies
         run: npx playwright install chromium --with-deps
 
-      - name: Install Xvfb, x11vnc, fluxbox, and xvfb-run
+      - name: Install Xvfb, x11vnc, and fluxbox
         run: sudo apt-get update && sudo apt-get install -y xvfb x11vnc fluxbox net-tools
 
-      - name: Start virtual display and window manager
+      - name: Start Xvfb, Fluxbox, and x11vnc
         run: |
-          export DISPLAY=:99
-          Xvfb $DISPLAY -screen 0 1280x720x24 &>/tmp/xvfb.log & sleep 1
-          # start a lightweight WM so windows can be shown
-          DISPLAY=$DISPLAY fluxbox &>/tmp/fluxbox.log & sleep 1
+          # Start virtual display
+          Xvfb :99 -screen 0 1280x720x24 &>/tmp/xvfb.log &
+          sleep 2
 
-      - name: Start x11vnc server on display :99
-        run: |
-          export DISPLAY=:99
-          # -nopw for no password (temporary runner); -forever keeps server up; -shared allows multiple clients
-          x11vnc -display $DISPLAY -nopw -forever -shared -rfbport 5900 &>/tmp/x11vnc.log &
+          # Start lightweight window manager
+          fluxbox &>/tmp/fluxbox.log &
+          sleep 1
 
-      - name: Start tmate (open interactive session to access the runner)
-        uses: mxschmitt/action-tmate@v4
+          # Start VNC server (port 5900)
+          x11vnc -display :99 -nopw -forever -shared -rfbport 5900 &>/tmp/x11vnc.log &
+          sleep 1
+
+      - name: Start tmate interactive session (before tests)
+        uses: mxschmitt/action-tmate@v3
         with:
           wait-for-connection: true
 
       - name: Run Playwright tests (headed)
-        run: |
-          export DISPLAY=:99
-          npx playwright test tests/sidebarNavigation.spec.ts --headed --timeout=120000
-      - name: Setup tmate session
+        run: npx playwright test tests/sidebarNavigation.spec.ts --headed --timeout=120000
+
+      - name: Setup tmate session on failure
         uses: mxschmitt/action-tmate@v3
         if: ${{ failure() }}
         with:
-          # Optional: limits debugging session so it does not hold the runner indefinitely
           limit-access-to-actor: false
