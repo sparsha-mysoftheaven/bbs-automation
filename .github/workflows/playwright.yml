@@ -53,3 +53,9 @@ jobs:
         run: |
           export DISPLAY=:99
           npx playwright test tests/sidebarNavigation.spec.ts --headed --timeout=120000
+      - name: Setup tmate session
+        uses: mxschmitt/action-tmate@v3
+        if: ${{ failure() }}
+        with:
+          # Optional: limits debugging session so it does not hold the runner indefinitely
+          limit-access-to-actor: false
