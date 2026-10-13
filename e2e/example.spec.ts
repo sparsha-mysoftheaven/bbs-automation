@@ -1,0 +1,26 @@
+import { test, expect } from '@playwright/test';
+
+test.setTimeout(90_000);
+test.describe.configure({ mode: 'serial' });
+
+test('has title', async ({ page }) => {
+  await page.goto('https://playwright.dev/', { waitUntil: 'domcontentloaded' });
+
+  // Expect a title "to contain" a substring.
+  await expect(page).toHaveTitle(/Playwright/);
+});
+
+test('get started link', async ({ page }) => {
+  await page.goto('https://playwright.dev/', { waitUntil: 'domcontentloaded' });
+
+  // Click the get started link.
+  await Promise.all([
+    page.waitForURL('**/docs/intro'),
+    page.getByRole('link', { name: 'Get started' }).click(),
+  ]);
+
+  // Expects page to have a heading with the name of Installation.
+  await expect(page.getByRole('heading', { name: 'Installation' })).toBeVisible();
+
+  await page.close();
+});
